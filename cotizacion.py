@@ -64,7 +64,11 @@ def get_usd_card():
 # Comando /start
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
+<<<<<<< HEAD
     bot.reply_to(message, "¡Hola! Soy tu bot económico. Puedes consultar:\n - /dolar_oficial\n - /dolar_blue\n - /dolar_tarjeta\n - /tasa_leliq")
+=======
+    bot.reply_to(message, "¡Hola! Soy tu bot económico. Puedes consultar:\n - /dolar_oficial\n - /dolar_blue\n - /tasa_leliq")
+>>>>>>> a9e62f17dca3cdaece73ed2d845b48eeee3f9caa
 
 # Comando /help
 @bot.message_handler(commands=['help'])
