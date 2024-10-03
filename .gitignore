@@ -1,3 +1,20 @@
+# Ignorar archivos y carpetas sensibles
 .env
-._pycache_
-.gitignore
+
+# Ignorar cachés de Python
+__pycache__/
+*.py[cod]
+
+# Ignorar archivos y carpetas del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Ignorar archivos relacionados con entornos virtuales
+venv/
+*.env
+
+# Ignorar archivos de log
+*.log
+
+# Ignorar archivos compilados
+*.pyc
