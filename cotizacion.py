@@ -92,6 +92,8 @@ def get_politica_monetaria():
     data = fetch_data(url)
     return [(item['fecha'], item['valor']) for item in data['results']] if data and 'results' in data else []
 
+from datetime import datetime, timedelta
+
 def obtener_datos_diarios(fecha=None):
     if fecha is None:
         fecha = datetime.now().strftime('%Y-%m-%d')
@@ -100,10 +102,15 @@ def obtener_datos_diarios(fecha=None):
     valor_usd_mayorista = get_usd_blue()
     reservas_internacionales = get_reservas_internacionales()
     tasa_politica_monetaria = get_politica_monetaria()
+    
+    # Aquí asumimos que get_usd_of() y get_usd_blue() devuelven tuplas
+    # Si devuelven un valor diferente, ajusta según tu lógica.
+    valor_usd_minorista_variacion = valor_usd_minorista[0]  # Ajusta si es necesario
+    valor_usd_mayorista_variacion = valor_usd_mayorista[0]  # Ajusta si es necesario
 
     datos = {
-        "Tipo de Cambio Minorista": valor_usd_minorista,  
-        "Tipo de Cambio Mayorista": valor_usd_mayorista,  
+        "Tipo de Cambio Minorista": valor_usd_minorista_variacion,  
+        "Tipo de Cambio Mayorista": valor_usd_mayorista_variacion,  
         "Reservas Internacionales del BCRA": reservas_internacionales,  
         "Tasa de Política Monetaria": tasa_politica_monetaria  
     }
@@ -129,7 +136,6 @@ def calcular_variaciones(datos_hoy, datos_ayer):
 
     return variaciones
 
-
 def resumen_diario():
     fecha_hoy = datetime.now().strftime('%Y-%m-%d')
     fecha_ayer = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
@@ -139,7 +145,17 @@ def resumen_diario():
     
     variaciones = calcular_variaciones(datos_hoy, datos_ayer)
     
-    resumen = f"Resumen"
+    # Agrega el resumen aquí
+    resumen = {
+        "Resumen de variaciones": {
+            "Tipo de Cambio Minorista": variaciones.get("Tipo de Cambio Minorista", 0.0),
+            "Tipo de Cambio Mayorista": variaciones.get("Tipo de Cambio Mayorista", 0.0),
+            "Reservas Internacionales": variaciones.get("Reservas Internacionales del BCRA", 0.0),
+            "Tasa de Política Monetaria": variaciones.get("Tasa de Política Monetaria", 0.0),
+        }
+    }
+    
+    return resumen
 
 
 
@@ -324,24 +340,19 @@ def graficar_inflacion(message):
     else:
         bot.reply_to(message, "No se pudo graficar la inflación.")
 
+        
 @bot.message_handler(commands=['resumen'])
 def resumen(message):
-    fecha_hoy = datetime.now().strftime('%Y-%m-%d')
-    fecha_ayer = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-    
-    # Obtener datos de hoy y de ayer
-    datos_hoy = obtener_datos_diarios(fecha_hoy)
-    datos_ayer = obtener_datos_diarios(fecha_ayer)
-    
-    # Calcular variaciones
-    variaciones = calcular_variaciones(datos_hoy, datos_ayer)
+    # Obtener el resumen diario
+    resumen_diario_data = resumen_diario()
 
-    # Preparar el mensaje de resumen
+    # Crear un mensaje con el resumen de variaciones
     resumen_texto = "Resumen de variaciones:\n"
-    for clave, variacion in variaciones.items():
-        resumen_texto += f"{clave}: {variacion}%\n"
+    for clave, valor in resumen_diario_data["Resumen de variaciones"].items():
+        resumen_texto += f"{clave}: {valor}%\n"
 
-    bot.send_message(message.chat.id, resumen_texto)
+    # Enviar el resumen al chat
+    bot.reply_to(message, resumen_texto)
 
 
 # Si el bot recibe un mensaje no reconocido
