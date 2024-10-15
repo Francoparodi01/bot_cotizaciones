@@ -1,0 +1,23 @@
+# Ignorar archivos y carpetas sensibles
+.env
+
+# Ignorar cachés de Python
+__pycache__
+*.py[cod]
+
+# Ignorar archivos y carpetas del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Ignorar archivos relacionados con entornos virtuales
+venv/
+*.env
+
+# Ignorar archivos de log
+*.log
+
+# Ignorar archivos compilados
+*.pyc
+
+#.txt
+bot-cotizaciones-bloc-ideas.txt

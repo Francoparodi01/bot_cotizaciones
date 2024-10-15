@@ -1,0 +1,50 @@
+Estructura modular: Organiza el proyecto en módulos para facilitar el mantenimiento.
+Alertas personalizadas: Permite a los usuarios configurar alertas.
+Gráficas e informes: Genera gráficos de tendencias económicas.
+Comandos interactivos: Agrega comandos como /dolar, /inflacion, etc.
+Resumen diario o semanal: Envía resúmenes programados.
+Predicciones (opcional): Implementa predicciones económicas usando machine learning.
+Despliegue y escalabilidad: Considera desplegar el bot en un servidor para mantenerlo siempre disponible.
+
+----------------------------------------------------------------------------------------------------------------
+
+Reservas Internacionales del BCRA (millones de USD):
+
+Fecha: 2024-10-08
+Valor: 28.388 millones de USD
+Tipo de Cambio Minorista (ARS/USD):
+
+Fecha: 2024-10-10
+Valor: 1.011,27 ARS/USD
+Tipo de Cambio Mayorista (ARS/USD):
+
+Fecha: 2024-10-10
+Valor: 979,42 ARS/USD
+Tasa de Política Monetaria (% anual nominal):
+
+Fecha: 2024-10-10
+Valor: 40%
+Tasa BADLAR en pesos de bancos privados (% anual nominal):
+
+Fecha: 2024-10-09
+Valor: 38,56%
+Tasa de Interés por Depósitos a 30 días (% anual nominal):
+
+Fecha: 2024-10-09
+Valor: 38,04%
+Base Monetaria (millones de pesos):
+
+Fecha: 2024-10-08
+Valor: 23.956.307 millones de pesos
+Inflación Mensual (%):
+
+Fecha: 2024-09-30
+Valor: 3,5%
+Inflación Interanual (%):
+
+Fecha: 2024-09-30
+Valor: 209%
+Índice para Contratos de Locación (ICL):
+
+Fecha: 2024-10-14
+Valor: 19,42 (base 30.6.2020=1)
