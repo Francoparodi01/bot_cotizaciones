@@ -11,7 +11,6 @@ import threading
 import io
 import matplotlib.pyplot as plt
 import pandas as pd
-from lecaps import lecaps_vigentes, imprimir_tasa_lecaps, curva_de_tasas
 
 
 # Cargamos las variables desde el archivo .env
@@ -20,6 +19,7 @@ load_dotenv()
 # Variables obtenidas desde el .env
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 API_BCRA_TOKEN = os.getenv('API_BCRA_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 # Inicializamos el bot con telebot
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
@@ -92,7 +92,38 @@ def get_politica_monetaria():
     data = fetch_data(url)
     return [(item['fecha'], item['valor']) for item in data['results']] if data and 'results' in data else []
 
-from datetime import datetime, timedelta
+def get_usd_of():
+    data = requests.get('https://dolarapi.com/v1/dolares/oficial').json()
+    return data.get('compra', 'No disponible'), data.get('venta', 'No disponible')
+
+# Función para establecer el valor del dólar al inicio del día
+def obtener_valor_inicial():
+    global valor_usd_inicio
+    compra, _ = get_usd_of()
+    valor_usd_inicio = float(compra) if compra != 'No disponible' else None
+
+# Función para comparar y mostrar la variación del dólar
+def comparar_dolar():
+    global valor_usd_inicio
+    compra_actual, _ = get_usd_of()
+    
+    if compra_actual != 'No disponible' and valor_usd_inicio:
+        compra_actual = float(compra_actual)
+        variacion = round((compra_actual - valor_usd_inicio) / valor_usd_inicio * 100, 2)
+        mensaje = f"El valor del dólar oficial ha variado un {variacion}% desde el inicio del día. Precio actual: {compra_actual}"
+    else:
+        mensaje = "No se pudo obtener el valor del dólar oficial actual."
+    
+    bot.send_message(TELEGRAM_CHAT_ID, mensaje)
+
+# Función para configurar las alertas
+def iniciar_alertas():
+    obtener_valor_inicial()  # Establece el valor al inicio del día
+    schedule.every().hour.do(comparar_dolar)  # Configura la alerta cada hora
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 def obtener_datos_diarios(fecha=None):
     if fecha is None:
@@ -313,10 +344,10 @@ def inflacion(message):
 # grafico de las reservas internacionales
 @bot.message_handler(commands=['graficar_reservas'])
 def graficar_reservas(message):
-    data = get_reservas_internacionales()  # Obtener los datos de reservas internacionales
-    img_buffer = plot_reservas(data)  # Generar el gráfico y guardar en un buffer
+    data = get_reservas_internacionales() 
+    img_buffer = plot_reservas(data)  
     if img_buffer:
-        bot.send_photo(message.chat.id, img_buffer)  # Enviar el gráfico al usuario
+        bot.send_photo(message.chat.id, img_buffer)  
     else:
         bot.reply_to(message, "No se pudieron graficar las reservas internacionales.")
 
@@ -333,10 +364,10 @@ def graficar_base_monetaria(message):
 # Comando para graficar la inflación
 @bot.message_handler(commands=['graficar_inflacion'])
 def graficar_inflacion(message):
-    data_inflation = get_inflation_data()  # Obtener los datos de inflación
-    img_buffer = plot_inflation(data_inflation)  # Generar el gráfico y guardar en un buffer
+    data_inflation = get_inflation_data() 
+    img_buffer = plot_inflation(data_inflation)
     if img_buffer:
-        bot.send_photo(message.chat.id, img_buffer)  # Enviar el gráfico al usuario
+        bot.send_photo(message.chat.id, img_buffer) 
     else:
         bot.reply_to(message, "No se pudo graficar la inflación.")
 
@@ -353,6 +384,78 @@ def resumen(message):
 
     # Enviar el resumen al chat
     bot.reply_to(message, resumen_texto)
+
+
+@bot.message_handler(commands=['dl_diario'])
+def send_welcome(message):
+    TELEGRAM_CHAT_ID = '8020614355'
+    TELEGRAM_CHAT_ID = message.chat.id  
+    dolar_oficial = get_usd_of()
+    dolar_blue = get_usd_blue()
+    bot.reply_to(message, f"¡Bienvenido! Las alertas del dólar oficial comenzarán cada hora.\n"
+                      f"El valor del dólar oficial es: {dolar_oficial[0]}\n"
+                      f"El valor del dólar blue es: {dolar_blue[0]}")
+
+    hilo_alertas = threading.Thread(target=iniciar_alertas)
+    hilo_alertas.start()
+
+def obtener_valor_inicial():
+    global valor_usd_inicio
+    compra, _ = get_usd_of()
+    valor_usd_inicio = float(compra) if compra != 'No disponible' else None
+
+# Función para comparar y mostrar la variación del dólar
+def comparar_dolar():
+    global valor_usd_inicio
+    compra_actual, _ = get_usd_of()
+    
+    if compra_actual != 'No disponible' and valor_usd_inicio:
+        compra_actual = float(compra_actual)
+        variacion = round((compra_actual - valor_usd_inicio) / valor_usd_inicio * 100, 2)
+        mensaje = f"El valor del dólar oficial ha variado un {variacion}% desde el inicio del día. Precio actual: {compra_actual}"
+    else:
+        mensaje = "No se pudo obtener el valor del dólar oficial actual."
+    
+    # Enviar el mensaje automáticamente
+    bot.send_message(TELEGRAM_CHAT_ID, mensaje)
+
+# Función para enviar un resumen diario
+def enviar_resumen_diario():
+    resumen = resumen_diario()
+    
+    mensaje = "Resumen diario de las variaciones económicas:\n"
+    mensaje += f"- Tipo de Cambio Minorista: {resumen['Resumen de variaciones']['Tipo de Cambio Minorista']}%\n"
+    mensaje += f"- Tipo de Cambio Mayorista: {resumen['Resumen de variaciones']['Tipo de Cambio Mayorista']}%\n"
+    mensaje += f"- Reservas Internacionales: {resumen['Resumen de variaciones']['Reservas Internacionales']}%\n"
+    mensaje += f"- Tasa de Política Monetaria: {resumen['Resumen de variaciones']['Tasa de Política Monetaria']}%\n"
+    
+    # Enviar el mensaje automáticamente
+    bot.send_message(TELEGRAM_CHAT_ID, mensaje)
+
+# Función para configurar las alertas
+def iniciar_alertas():
+    obtener_valor_inicial()  # Establece el valor al inicio del día
+    schedule.every().hour.do(comparar_dolar)  # Configura la alerta cada hora
+    schedule.every().day.at("20:00").do(enviar_resumen_diario)  # Envía un resumen diario a las 8 p.m.
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+def iniciar_alertas():
+    obtener_valor_inicial()  # Establece el valor al inicio del día
+
+    # Para pruebas, puedes usar la programación cada minuto
+    schedule.every().minute.do(comparar_dolar)  
+    schedule.every().day.at("17:30").do(enviar_resumen_diario)  
+
+    schedule.every().day.at("20:00").do(enviar_resumen_diario)  
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+
 
 
 # Si el bot recibe un mensaje no reconocido
