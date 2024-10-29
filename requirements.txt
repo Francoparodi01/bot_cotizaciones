@@ -1,1 +1,6 @@
 pyTelegramBotAPI
+requests
+python-dotenv
+matplotlib
+pandas
+schedule
