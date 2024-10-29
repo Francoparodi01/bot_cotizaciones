@@ -1,1 +1,1 @@
-worker: python cotizacion.py
+web: python cotizacion.py
