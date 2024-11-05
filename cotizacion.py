@@ -97,60 +97,6 @@ def get_politica_monetaria():
     return [(item['fecha'], item['valor']) for item in data['results']] if data and 'results' in data else []
 
 
-# Función para revisar cambios en el dólar blue y enviar mensajes
-def revisar_dolar_blue():
-    global ultimo_precio_blue
-    compra, venta = get_usd_blue()
-    
-    if venta:
-        venta = float(venta)  # Aseguramos que sea un número
-        if ultimo_precio_blue is None:
-            ultimo_precio_blue = venta  # Guardamos el primer valor
-        else:
-            # Calculamos la variación porcentual
-            variacion = abs(venta - ultimo_precio_blue) / ultimo_precio_blue * 100
-            if variacion >= 1:  # Umbral de 1% de cambio
-                bot.send_message(chat_id, f"⚠️ Variación en el Dólar Blue ⚠️\nNuevo precio de venta: {venta} ARS\nVariación: {variacion:.2f}%")
-                ultimo_precio_blue = venta  # Actualizamos el valor
-
-# Función que ejecuta las revisiones periódicasx
-def verificar_variaciones():
-    revisar_dolar_oficial()
-    revisar_dolar_blue()
-
-# acordamos las revisiones a cada minuto
-schedule.every(1).minutes.do(verificar_variaciones)
-
-
-# Función para revisar cambios en el dólar oficial y enviar mensajes
-def revisar_dolar_oficial():
-    global ultimo_precio_oficial
-    compra, venta = get_usd_of()
-    
-    if venta:
-        venta = float(venta)  # Aseguramos que sea un número
-        if ultimo_precio_oficial is None:
-            ultimo_precio_oficial = venta  # Guardamos el primer valor
-        else:
-            # Calculamos la variación porcentual
-            variacion = abs(venta - ultimo_precio_oficial) / ultimo_precio_oficial * 100
-            if variacion >= 1:  # Umbral de 1% de cambio
-                bot.send_message(chat_id, f"⚠️ Variación en el Dólar Oficial ⚠️\nNuevo precio de venta: {venta} ARS\nVariación: {variacion:.2f}%")
-                ultimo_precio_oficial = venta  # Actualizamos el valor
-
-def run_schedule():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)  # Pausa de 1 segundo entre cada revisión de tareas pendientes
-
-# Iniciar el ciclo de schedule en un hilo
-threading.Thread(target=run_schedule).start()
-
-
-
-
-
-
 # ---------------------------------------------------------------------------------------------------------------
 # Gráficos 
 
