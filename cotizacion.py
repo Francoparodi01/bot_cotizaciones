@@ -1,16 +1,12 @@
 import requests
 import telebot
 import os
-import certifi
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
-import matplotlib
-import schedule
+from datetime import datetime
 import time
-import threading
 import io
 import matplotlib.pyplot as plt
-import pandas as pd
+import pandas 
 
 
 # Cargamos las variables desde el archivo .env
@@ -20,9 +16,11 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 API_BCRA_TOKEN = os.getenv('API_BCRA_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+PORT = int(os.getenv('PORT', 5000))
 
 # Inicializamos el bot con telebot
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
+
 
 # Variables globales 
 ultimo_precio_oficial = None
@@ -96,6 +94,39 @@ def get_politica_monetaria():
     data = fetch_data(url)
     return [(item['fecha'], item['valor']) for item in data['results']] if data and 'results' in data else []
 
+
+previous_data = None
+
+def check_for_updates():
+    global previous_data
+    try:
+        response = requests.get('https://dolarapi.com/v1/ambito/dolares')
+        response.raise_for_status() 
+        new_data = response.json()
+        
+        if previous_data is None:
+            previous_data = new_data
+
+        
+
+        for old, new in zip(previous_data, new_data):
+            if old != new:  
+                send_message(new) 
+                print(f'Cambio detectado en: {new["nombre"]}, tipo: {new["casa"]}')
+
+        previous_data = new_data
+
+    except requests.RequestException as e:
+        print(f'Error al obtener datos de la API: {e}')
+
+def send_message(data):
+    print('¡Se detectó un cambio en la API!')
+    print('Detalles del cambio:', data)
+    bot.send_message(TELEGRAM_CHAT_ID, f'¡Se detectó un cambio en la API!\nDetalles del cambio: {data}')
+
+while True:
+    check_for_updates()
+    time.sleep(60)
 
 # ---------------------------------------------------------------------------------------------------------------
 # Gráficos 
