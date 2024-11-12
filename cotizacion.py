@@ -11,6 +11,8 @@ import threading
 import io
 import matplotlib.pyplot as plt
 import pandas as pd
+from flask import Flask, request, jsonify 
+import threading
 
 
 # Cargamos las variables desde el archivo .env
@@ -20,6 +22,7 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 API_BCRA_TOKEN = os.getenv('API_BCRA_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+app = Flask(__name__)
 
 # Inicializamos el bot con telebot
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
@@ -183,11 +186,28 @@ def plot_inflation(data):
         print("No hay datos para graficar.")
         return None
 
-# Comandos del bot telegram
+# ---------------------------------------------------------------------------------------------------------------
+
+# Rutas de la API
+@app.route('/')
+def index():
+    return "¡Hola! Este es el servidor de tu bot económico."
+
+@app.route('/start_telegram_bot', methods=['GET'])
+def start_telegram_bot():
+    threading.Thread(target=run_telegram_bot).start()
+    return jsonify({"message": "Bot de Telegram iniciado correctamente."}), 200
+
+def run_telegram_bot():
+    bot.polling(none_stop=True)
+
+
+# Función para iniciar el bot de Telegram
 # Comando /start
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     bot.reply_to(message, "¡Hola! Soy tu bot económico. Puedes consultar:\n - /dolar_oficial\n - /dolar_blue\n - /dolar_tarjeta\n - /tasa_leliq\n - /base_monetaria\n - /graficar_base")
+
 
 # Comando /help
 @bot.message_handler(commands=['help'])
@@ -286,5 +306,6 @@ def echo_all(message):
     bot.reply_to(message, "¡No entiendo lo que quieres decirme! Usa los comandos /start o /help para obtener más información.")
 
 # Main
-if __name__ == "__main__":
+if __name__ == '__main__':
+    threading.Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 5000}).start()
     bot.polling(none_stop=True)
