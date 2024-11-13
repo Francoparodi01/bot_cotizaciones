@@ -272,30 +272,29 @@ def inflacion(message):
 # grafico de las reservas internacionales
 @bot.message_handler(commands=['graficar_reservas'])
 def graficar_reservas(message):
-    data = get_reservas_internacionales()  # Obtener los datos de reservas internacionales
-    img_buffer = plot_reservas(data)  # Generar el gráfico y guardar en un buffer
+    data = get_reservas_internacionales()  
+    img_buffer = plot_reservas(data)  
     if img_buffer:
-        bot.send_photo(message.chat.id, img_buffer)  # Enviar el gráfico al usuario
+        bot.send_photo(message.chat.id, img_buffer)  
     else:
         bot.reply_to(message, "No se pudieron graficar las reservas internacionales.")
 
 # Comando para graficar la base monetaria
 @bot.message_handler(commands=['graficar_base'])
 def graficar_base_monetaria(message):
-    data_base_monetaria = get_base_monetaria()  # Obtener los datos de la base monetaria
-    img_buffer = plot_base_monetaria(data_base_monetaria)  # Generar el gráfico y guardar en un buffer
+    data_base_monetaria = get_base_monetaria()  
+    img_buffer = plot_base_monetaria(data_base_monetaria)  
     if img_buffer:
-        bot.send_photo(message.chat.id, img_buffer)  # Enviar el gráfico al usuario
-    else:
+        bot.send_photo(message.chat.id, img_buffer)  
         bot.reply_to(message, "No se pudo graficar la base monetaria.")
 
 # Comando para graficar la inflación
 @bot.message_handler(commands=['graficar_inflacion'])
 def graficar_inflacion(message):
-    data_inflation = get_inflation_data()  # Obtener los datos de inflación
-    img_buffer = plot_inflation(data_inflation)  # Generar el gráfico y guardar en un buffer
+    data_inflation = get_inflation_data() 
+    img_buffer = plot_inflation(data_inflation) 
     if img_buffer:
-        bot.send_photo(message.chat.id, img_buffer)  # Enviar el gráfico al usuario
+        bot.send_photo(message.chat.id, img_buffer)  
     else:
         bot.reply_to(message, "No se pudo graficar la inflación.")
 
