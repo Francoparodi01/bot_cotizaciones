@@ -3,13 +3,13 @@ import telebot
 import os
 from dotenv import load_dotenv
 from datetime import datetime
-import threading
 import io
 import matplotlib.pyplot as plt
 import pandas as pd
-from flask import Flask, request, jsonify 
+from flask import Flask, request, jsonify
+import schedule
+import time
 import threading
-
 
 # Cargamos las variables desde el archivo .env
 load_dotenv()
@@ -18,6 +18,8 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 API_BCRA_TOKEN = os.getenv('API_BCRA_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+YOUR_USER_ID = os.getenv('YOUR_USER_ID')
+
 app = Flask(__name__)
 
 # Inicializamos el bot con telebot
@@ -27,8 +29,7 @@ bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 ultimo_precio_oficial = None
 ultimo_precio_blue = None
 
-# Funciones para obtener datos
-
+# Función general para obtener datos desde una URL
 def fetch_data(url, headers=None):
     try:
         response = requests.get(url, verify=False, headers=headers)
@@ -58,7 +59,6 @@ def get_reservas_internacionales():
     data = fetch_data(url)
     return [(item['fecha'], item['valor']) for item in data['results']] if data and 'results' in data else []
 
-# Funciones para obtener la inflación
 def get_inflation_data():
     fecha_inicio = '2023-12-10'
     fecha_hoy_str = datetime.now().strftime('%Y-%m-%d')
@@ -96,8 +96,36 @@ def get_politica_monetaria():
     return [(item['fecha'], item['valor']) for item in data['results']] if data and 'results' in data else []
 
 
+def send_periodic_updates():
+    # Obtener los precios
+    precio_oficial_compra, precio_oficial_venta = get_usd_of()
+    precio_blue_compra, precio_blue_venta = get_usd_blue()
+
+    # Crear un mensaje con la información obtenida
+    message = f"**Actualización del precio del dólar:**\n"
+    message += f"**Dólar Oficial:** Compra: {precio_oficial_compra} | Venta: {precio_oficial_venta}\n"
+    message += f"**Dólar Blue:** Compra: {precio_blue_compra} | Venta: {precio_blue_venta}\n"
+
+    # Enviar el mensaje a tu cuenta (usando tu user_id)
+    bot.send_message(YOUR_USER_ID, message)
+
+def schedule_updates():
+    # Ejecutar la tarea cada 1 minuto
+    schedule.every(1).minutes.do(send_periodic_updates)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+def start_periodic_updates():
+    # Iniciar la tarea en un hilo separado
+    threading.Thread(target=schedule_updates, daemon=True).start()
+
+# Iniciar las actualizaciones periódicas
+start_periodic_updates()
+
 # ---------------------------------------------------------------------------------------------------------------
-# Gráficos 
+# Funciones para crear gráficos
 
 def plot_reservas(data):
     if data:
@@ -154,8 +182,6 @@ def plot_base_monetaria(data_base_monetaria):
         print("La base monetaria está vacía.")
         return None
 
-#grafico de la inflacion
-
 def plot_inflation(data):
     if data:
         fechas, valores = zip(*data)  # Descomponemos en dos listas, fechas y valores
@@ -182,6 +208,7 @@ def plot_inflation(data):
         print("No hay datos para graficar.")
         return None
 
+
 # ---------------------------------------------------------------------------------------------------------------
 
 # Rutas de la API
@@ -192,6 +219,7 @@ def index():
 @app.route('/start_telegram_bot', methods=['GET'])
 def start_telegram_bot():
     threading.Thread(target=run_telegram_bot).start()
+    start_periodic_updates()  # Iniciar actualizaciones periódicas
     return jsonify({"message": "Bot de Telegram iniciado correctamente."}), 200
 
 def run_telegram_bot():
@@ -202,10 +230,9 @@ def run_telegram_bot():
 # Comando /start
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "¡Hola! Soy tu bot económico. Puedes consultar:\n - /dolar_oficial\n - /dolar_blue\n - /dolar_tarjeta\n - /tasa_leliq\n - /base_monetaria\n - /graficar_base")
+    bot.reply_to(message, "¡Hola! Soy tu bot económico. Las actualizaciones periódicas están activas.\nPuedes consultar:\n - /dolar_oficial\n - /dolar_blue\n - /dolar_tarjeta\n - /tasa_leliq\n - /base_monetaria\n - /graficar_base")
 
-
-# Comando /help
+# Comando /help 
 @bot.message_handler(commands=['help'])
 def send_help(message):
     help_text = (
@@ -213,11 +240,11 @@ def send_help(message):
         " - /dolar_oficial: Precio del dólar oficial.\n"
         " - /dolar_blue: Precio del dólar blue.\n"
         " - /dolar_tarjeta: Precio del dólar tarjeta.\n"
+        " - /reservas_internacionales: Datos de las reservas internacionales.\n"
+        " - /inflacion: Datos de la inflación.\n"
         " - /base_monetaria: Datos de la base monetaria.\n"
-        " - /inflacion: Últimos datos de inflación.\n"
-        " - /graficar_reservas: Gráfico de reservas internacionales.\n"
-        " - /graficar_inflacion: Gráfico de la inflación.\n"
         " - /graficar_base: Gráfico de la base monetaria.\n"
+        " - /graficar_inflacion: Gráfico de la inflación.\n"
     )
     bot.reply_to(message, help_text)
 
@@ -248,14 +275,7 @@ def dolar_tarjeta(message):
     else:
         bot.reply_to(message, "No se pudo obtener el tipo de cambio del dólar tarjeta.")
 
-# Comando para obtener la base monetaria
-@bot.message_handler(commands=['base_monetaria'])
-def base_monetaria(message):
-    base = get_base_monetaria()
-    bot.reply_to(message, f"La base monetaria es: {base}")
-
 # comando para obtener la inflación
-
 @bot.message_handler(commands=['inflacion'])
 def inflacion(message):
     inflacion_data = get_inflation_data()
@@ -282,6 +302,7 @@ def graficar_base_monetaria(message):
     img_buffer = plot_base_monetaria(data_base_monetaria)  
     if img_buffer:
         bot.send_photo(message.chat.id, img_buffer)  
+    else:
         bot.reply_to(message, "No se pudo graficar la base monetaria.")
 
 # Comando para graficar la inflación
