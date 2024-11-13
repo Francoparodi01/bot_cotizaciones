@@ -1,12 +1,8 @@
 import requests
 import telebot
 import os
-import certifi
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
-import matplotlib
-import schedule
-import time
+from datetime import datetime
 import threading
 import io
 import matplotlib.pyplot as plt
