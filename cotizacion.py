@@ -25,9 +25,11 @@ app = Flask(__name__)
 # Inicializamos el bot con telebot
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
-# Variables globales 
-ultimo_precio_oficial = None
-ultimo_precio_blue = None
+# Variables para almacenar los precios anteriores
+last_precio_oficial_compra = None
+last_precio_oficial_venta = None
+last_precio_blue_compra = None
+last_precio_blue_venta = None
 
 # Función general para obtener datos desde una URL
 def fetch_data(url, headers=None):
@@ -97,32 +99,44 @@ def get_politica_monetaria():
 
 
 def send_periodic_updates():
-    # Obtener los precios
+    global last_precio_oficial_compra, last_precio_oficial_venta
+    global last_precio_blue_compra, last_precio_blue_venta
+
+    # Obtener los precios actuales
     precio_oficial_compra, precio_oficial_venta = get_usd_of()
     precio_blue_compra, precio_blue_venta = get_usd_blue()
 
-    # Crear un mensaje con la información obtenida
-    message = f"**Actualización del precio del dólar:**\n"
-    message += f"**Dólar Oficial:** Compra: {precio_oficial_compra} | Venta: {precio_oficial_venta}\n"
-    message += f"**Dólar Blue:** Compra: {precio_blue_compra} | Venta: {precio_blue_venta}\n"
+    # Asegúrate de que los valores sean numéricos para una comparación consistente
+    try:
+        precio_oficial_compra = float(precio_oficial_compra)
+        precio_oficial_venta = float(precio_oficial_venta)
+        precio_blue_compra = float(precio_blue_compra)
+        precio_blue_venta = float(precio_blue_venta)
+    except ValueError:
+        print("Error: No se pudieron convertir los valores a números.")
+        return  # Salir si la conversión falla
 
-    # Enviar el mensaje a tu cuenta (usando tu user_id)
-    bot.send_message(YOUR_USER_ID, message)
+    # Verificar si hubo una variación en alguno de los precios
+    if (precio_oficial_compra != last_precio_oficial_compra or
+        precio_oficial_venta != last_precio_oficial_venta or
+        precio_blue_compra != last_precio_blue_compra or
+        precio_blue_venta != last_precio_blue_venta):
+        
+        # Actualizar los precios anteriores
+        last_precio_oficial_compra = precio_oficial_compra
+        last_precio_oficial_venta = precio_oficial_venta
+        last_precio_blue_compra = precio_blue_compra
+        last_precio_blue_venta = precio_blue_venta
 
-def schedule_updates():
-    # Ejecutar la tarea cada 1 minuto
-    schedule.every(1).minutes.do(send_periodic_updates)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
-
-def start_periodic_updates():
-    # Iniciar la tarea en un hilo separado
-    threading.Thread(target=schedule_updates, daemon=True).start()
-
-# Iniciar las actualizaciones periódicas
-start_periodic_updates()
+        # Crear y enviar el mensaje
+        message = (
+            f"Actualización del precio del dólar:\n"
+            f"Dólar Oficial: Compra: {precio_oficial_compra} | Venta: {precio_oficial_venta}\n"
+            f"Dólar Blue: Compra: {precio_blue_compra} | Venta: {precio_blue_venta}"
+        )
+        bot.send_message(YOUR_USER_ID, message)
+    else:
+        print("No hubo cambios en los precios, no se enviará ninguna actualización.")
 
 # ---------------------------------------------------------------------------------------------------------------
 # Funciones para crear gráficos
@@ -181,7 +195,7 @@ def plot_base_monetaria(data_base_monetaria):
     else:
         print("La base monetaria está vacía.")
         return None
-
+    
 def plot_inflation(data):
     if data:
         fechas, valores = zip(*data)  # Descomponemos en dos listas, fechas y valores
@@ -207,8 +221,6 @@ def plot_inflation(data):
     else:
         print("No hay datos para graficar.")
         return None
-
-
 # ---------------------------------------------------------------------------------------------------------------
 
 # Rutas de la API
@@ -219,7 +231,7 @@ def index():
 @app.route('/start_telegram_bot', methods=['GET'])
 def start_telegram_bot():
     threading.Thread(target=run_telegram_bot).start()
-    start_periodic_updates()  # Iniciar actualizaciones periódicas
+    send_periodic_updates()  # Iniciar actualizaciones periódicas
     return jsonify({"message": "Bot de Telegram iniciado correctamente."}), 200
 
 def run_telegram_bot():
@@ -309,7 +321,7 @@ def graficar_base_monetaria(message):
 @bot.message_handler(commands=['graficar_inflacion'])
 def graficar_inflacion(message):
     data_inflation = get_inflation_data() 
-    img_buffer = plot_inflation(data_inflation) 
+    img_buffer = plot_inflation(data_inflation)
     if img_buffer:
         bot.send_photo(message.chat.id, img_buffer)  
     else:
