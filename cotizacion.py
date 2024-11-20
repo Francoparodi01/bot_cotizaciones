@@ -257,8 +257,15 @@ def send_help(message):
         " - /base_monetaria: Datos de la base monetaria.\n"
         " - /graficar_base: Gráfico de la base monetaria.\n"
         " - /graficar_inflacion: Gráfico de la inflación.\n"
+        " - /web: Sitio web de datos económicos."
     )
     bot.reply_to(message, help_text)
+
+# Comando para obtener la url del sitio web
+@bot.message_handler(commands=['web'])
+def send_web(message):
+    bot.reply_to(message, "Puedes encontrar más información en: https://cotiazaciones-argy.vercel.app")
+
 
 # Comando para obtener el dólar oficial
 @bot.message_handler(commands=['dolar_oficial'])
